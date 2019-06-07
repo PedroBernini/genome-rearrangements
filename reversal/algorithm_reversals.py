@@ -51,3 +51,14 @@ print("Total de reversões até a identidade:", reversoes)
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
+    
+string = ""
+for permutation in Permutations :
+    string += "'"
+    for i in range(0, len(permutation)) :
+        string += str(permutation[i])
+        if i != len(permutation) - 1 :
+            string += ","
+    string += "' "
+    
+print(string)
