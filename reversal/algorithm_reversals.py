@@ -1,4 +1,4 @@
-# The Natural Algorithm - Watterson
+# The Natural Algorithm
 # The Greedy Algorithm - Kececioglu
 # Autor: Pedro Henrique Bernini Silva
 
@@ -8,9 +8,15 @@ import os
 # ----- PERMUTAÇÃO (LINHA DE COMANDO) ----- #
 permutation = []
 n = len(sys.argv)
+last = 0
 
+permutation.append(0)
 for el in sys.argv[1].split(",") :
-        permutation.append(int(el))
+    identifier = int(el)
+    permutation.append(identifier)
+    if identifier > last :
+        last = identifier
+permutation.append(last + 1)
 
 # ----- FUNÇÕES ----- #
 def isAdjacent(a, b) :
@@ -21,25 +27,67 @@ def isAdjacent(a, b) :
 
 def breakPoints(permutation) :
     bkpMap.clear()
-    breakpoints = 0
-    for i in range(0,len(permutation)-1) :
+    breakPoints = 0
+    for i in range(0, len(permutation)-1) :
         if (isAdjacent(permutation[i+1], permutation[i]) is False):
-            breakpoints += 1
+            breakPoints += 1
             bkpMap.append((i,i+1))
-    return breakpoints
+    return breakPoints
+
+def hasDecreasingStrip(permutation, bkpMap) :
+    stripDecreasing = False
+    for i in range(0, len(bkpMap) - 1) :
+        start = bkpMap[i][1]
+        end = bkpMap[i+1][0]
+        if start == end :
+            stripDecreasing = True
+            break
+        elif (permutation[start] - permutation[start + 1] == 1):
+            stripDecreasing = True
+            break
+    return stripDecreasing
+
+def takeSmallestElement(permutation, bkpMap) :
+    smaller = len(permutation)
+    for i in range(0, len(bkpMap) - 1) :
+        start = bkpMap[i][1]
+        end = bkpMap[i+1][0]
+        if start == end and permutation[start] < smaller :
+            smaller = permutation[start]
+        elif (permutation[start] - permutation[start + 1] == 1) :
+            while start <= end :
+                if permutation[start] < smaller :
+                    smaller = permutation[start]
+                start += 1
+    return smaller
+
+def takeBiggestElement(permutation, bkpMap) :
+    bigger = 0
+    for i in range(0, len(bkpMap) - 1) :
+        start = bkpMap[i][1]
+        end = bkpMap[i+1][0]
+        if start == end and permutation[start] > bigger :
+            bigger = permutation[start]
+        elif (permutation[start] - permutation[start + 1] == 1) :
+            while start <= end :
+                if permutation[start] > bigger :
+                    bigger = permutation[start]
+                start += 1
+    return bigger
 
 def reversal(i, j) :
+    resultReversal = list(permutation)
     strip = []
     if(i>j) :
         temp = i
         i = j
         j = temp
     for k in range(i,j+1) :
-        strip.append(permutation[k]) 
+        strip.append(resultReversal[k]) 
     strip.reverse();
     for k in range(i,j+1) :
-        permutation[k] = strip[k-i]
-    return permutation
+        resultReversal[k] = strip[k-i]
+    return resultReversal
    
 # ----- ALGORITMO ----- #
 bkpMap = []
@@ -47,34 +95,47 @@ Permutations = [list(permutation)]
 reversoes = 0
 
 print("\nPermutação:", permutation)
-print("Quantidade de Breakpoints:", breakPoints(permutation))
-print("Mapa de BreakPoints:", bkpMap);
+print("Quantidade de breakPoints:", breakPoints(permutation))
+print("Mapa de breakPoints:", bkpMap);
 
-# The Natural Algorithm - Watterson
-while(breakPoints(permutation) > 0) :
-    for    i in range(0, len(permutation)) :
-        if(permutation[i] != i + 1) :
-            Permutations.append(list(reversal(i, permutation[i]-1)))
-            reversoes += 1
+# The Natural Algorithm
+#while(breakPoints(permutation) > 0) :
+#    for i in range(0, len(permutation)) :
+#        if(permutation[i] != i + 1) :
+#            permutation = reversal(i, permutation[i]-1)
+#            Permutations.append(list(permutation))
+#            reversoes += 1
 
 # The Greedy Algorithm - Kececioglu
-#while(breakPoints(permutation) > 0) :
+while(breakPoints(permutation) > 0) :
     
-#    Encontrar uma reversão que diminua 2 breakpoints
-#    for first in bkpMap :
-#        for second in bkpMap :
-#            if isAdjacent(permutation[first[0]], permutation[second[0]]) and isAdjacent(permutation[first[1]], permutation[second[1]]) :
-#                Permutations.append(list(reversal(first[1], second[0])))
-#                reversoes += 1
-            
-#    Encontrar uma reversão que diminua 1 breakpoints e deixe uma split decrescente
-            
-#    Encontrar uma reversão que diminua 1 breakpoints
-            
-#    Encontrar uma reversão que deixe uma split decrescente
+    resultReversal = None
+    if hasDecreasingStrip(permutation, bkpMap) :
+        # Encontrar o menor elemento de strip decrescente
+        k = takeSmallestElement(permutation, bkpMap)   
+        if permutation.index(k) < permutation.index(k - 1) :
+            resultReversal = reversal(permutation.index(k)+1,permutation.index(k-1))
+        else :
+            resultReversal = reversal(permutation.index(k),permutation.index(k-1)+1)
+        
+        # Encontrar o maior elemento de strip decrescente
+        breakPoints(resultReversal)
+        if hasDecreasingStrip(resultReversal, bkpMap) == False :
+            breakPoints(permutation)
+            l = takeBiggestElement(permutation, bkpMap)
+            if permutation.index(l) > permutation.index(l + 1) :
+                resultReversal = reversal(permutation.index(l)-1,permutation.index(l+1))
+            else :
+                resultReversal = reversal(permutation.index(l),permutation.index(l+1)-1)
+    else :
+        resultReversal = reversal(bkpMap[0][1],bkpMap[1][0])
+    
+    permutation = resultReversal
+    Permutations.append(list(permutation))
+    reversoes += 1
+    
 
-
-print("Total de reversões até a identidade:", reversoes)
+print("\nTotal de reversões até a identidade:", reversoes)
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
@@ -82,9 +143,9 @@ for el in Permutations :
 drawString = ''
 for permutation in Permutations :
     drawString += '"'
-    for i in range(0, len(permutation)) :
+    for i in range(1, len(permutation) - 1) :
         drawString += str(permutation[i])
-        if i != len(permutation) - 1 :
+        if i != len(permutation) - 2 :
             drawString += ","
     drawString += '" '
     
