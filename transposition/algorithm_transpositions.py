@@ -75,6 +75,16 @@ def takeBiggestElement(permutation, bkpMap) :
                 start += 1
     return bigger
 
+def sequenceAdjacents(index) :
+    adjacents = 1
+    j = 0
+    prox = index + j + 1
+    while prox <= len(permutation) - 1 and isAdjacent(permutation[index + j], permutation[index + j + 1]) == True :
+        j += 1
+        prox = index+j+1
+        adjacents += 1
+    return adjacents
+
 def transposition(i, j, k) :
     resultTransposition = []
     strip = []
@@ -113,7 +123,9 @@ print("Mapa de breakPoints:", bkpMap);
 while(breakPoints(permutation) > 0) :
     for i in range(0, len(permutation)) :
         if(permutation[i] != i) :
-            resultTranspositions = transposition(i, i+1, permutation[i]+1)
+            adjacents = sequenceAdjacents(i)
+            print(adjacents)
+            resultTranspositions = transposition(i, i+adjacents, permutation[i]+adjacents)
             permutation = resultTranspositions
             Permutations.append(list(permutation))
             transpositions += 1
