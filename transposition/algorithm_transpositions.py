@@ -78,55 +78,59 @@ def takeBiggestElement(permutation, bkpMap) :
 def transposition(i, j, k) :
     resultTransposition = []
     strip = []
-    
     for l in range(i, j) :
-        strip.append(permutation[l])
-    print(strip)
-    for l in range(0, i) :
-        resultTransposition.append(permutation[l])
-    for l in range(j, k) :
-        resultTransposition.append(permutation[l])
-    for el in strip :
-        resultTransposition.append(el)
-    for l in range(k, len(permutation)) :
-        resultTransposition.append(permutation[l])
-    return resultTransposition
+        strip.append(permutation[l])   
+    if j < k :
+        for l in range(0, i) :
+            resultTransposition.append(permutation[l])
+        for l in range(j, k) :
+            resultTransposition.append(permutation[l])
+        for el in strip :
+            resultTransposition.append(el)
+        for l in range(k, len(permutation)) :
+            resultTransposition.append(permutation[l])
+    else :
+        for l in range(0, k) :
+            resultTransposition.append(permutation[l])
+        for el in strip :
+            resultTransposition.append(el)
+        for l in range(k, i) :
+            resultTransposition.append(permutation[l])
+        for l in range(j, len(permutation)) :
+            resultTransposition.append(permutation[l])
+    return resultTransposition 
    
 # ----- ALGORITMO ----- #
 bkpMap = []
 Permutations = [list(permutation)]
-transposicoes = 0
+transpositions = 0
 
 print("\nPermutação:", permutation)
 print("Quantidade de breakPoints:", breakPoints(permutation))
 print("Mapa de breakPoints:", bkpMap);
 
-# The Natural Algorithm
+# SelectionSort Algorithm
 while(breakPoints(permutation) > 0) :
     for i in range(0, len(permutation)) :
-        if(permutation[i] != i + 1) :
-            permutation (i, permutation[i]-1)
+        if(permutation[i] != i) :
+            resultTranspositions = transposition(i, i+1, permutation[i]+1)
+            permutation = resultTranspositions
             Permutations.append(list(permutation))
-            reversoes += 1
-
-    permutation = resultReversal
-    Permutations.append(list(permutation))
-    transposicoes += 1
+            transpositions += 1
     
-
-print("\nTotal de transposições até a identidade:", transposicoes)
+print("\nTotal de transposições até a identidade:", transpositions)
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
     
-drawString = ''
-for permutation in Permutations :
-    drawString += '"'
-    for i in range(1, len(permutation) - 1) :
-        drawString += str(permutation[i])
-        if i != len(permutation) - 2 :
-            drawString += ","
-    drawString += '" '
-    
-print("\nDraw_Canvas( ", drawString, ")")
-os.system('python canvas.py ' + drawString)
+#drawString = ''
+#for permutation in Permutations :
+#    drawString += '"'
+#    for i in range(1, len(permutation) - 1) :
+#        drawString += str(permutation[i])
+#        if i != len(permutation) - 2 :
+#            drawString += ","
+#    drawString += '" '
+#    
+#print("\nDraw_Canvas( ", drawString, ")")
+#os.system('python canvas.py ' + drawString)
