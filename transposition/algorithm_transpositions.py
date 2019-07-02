@@ -1,5 +1,4 @@
-# The Natural Algorithm
-# The Greedy Algorithm - Kececioglu
+# Algorithm - Transpositions
 # Autor: Pedro Henrique Bernini Silva
 
 import sys
@@ -20,7 +19,7 @@ permutation.append(last + 1)
 
 # ----- FUNÇÕES ----- #
 def isAdjacent(a, b) :
-    if (abs(a - b) == 1) :
+    if b + 1 == a :
         return True
     else :
         return False
@@ -34,52 +33,11 @@ def breakPoints(permutation) :
             bkpMap.append((i,i+1))
     return breakPoints
 
-def hasDecreasingStrip(permutation, bkpMap) :
-    stripDecreasing = False
-    for i in range(0, len(bkpMap) - 1) :
-        start = bkpMap[i][1]
-        end = bkpMap[i+1][0]
-        if start == end :
-            stripDecreasing = True
-            break
-        elif (permutation[start] - permutation[start + 1] == 1):
-            stripDecreasing = True
-            break
-    return stripDecreasing
-
-def takeSmallestElement(permutation, bkpMap) :
-    smaller = len(permutation)
-    for i in range(0, len(bkpMap) - 1) :
-        start = bkpMap[i][1]
-        end = bkpMap[i+1][0]
-        if start == end and permutation[start] < smaller :
-            smaller = permutation[start]
-        elif (permutation[start] - permutation[start + 1] == 1) :
-            while start <= end :
-                if permutation[start] < smaller :
-                    smaller = permutation[start]
-                start += 1
-    return smaller
-
-def takeBiggestElement(permutation, bkpMap) :
-    bigger = 0
-    for i in range(0, len(bkpMap) - 1) :
-        start = bkpMap[i][1]
-        end = bkpMap[i+1][0]
-        if start == end and permutation[start] > bigger :
-            bigger = permutation[start]
-        elif (permutation[start] - permutation[start + 1] == 1) :
-            while start <= end :
-                if permutation[start] > bigger :
-                    bigger = permutation[start]
-                start += 1
-    return bigger
-
 def sequenceAdjacents(index) :
     adjacents = 1
     j = 0
     prox = index + j + 1
-    while prox <= len(permutation) - 1 and isAdjacent(permutation[index + j], permutation[index + j + 1]) == True :
+    while prox <= len(permutation) - 1 and isAdjacent(permutation[index + j + 1], permutation[index + j]) == True :
         j += 1
         prox = index+j+1
         adjacents += 1
@@ -124,7 +82,6 @@ while(breakPoints(permutation) > 0) :
     for i in range(0, len(permutation)) :
         if(permutation[i] != i) :
             adjacents = sequenceAdjacents(i)
-            print(adjacents)
             resultTranspositions = transposition(i, i+adjacents, permutation[i]+adjacents)
             permutation = resultTranspositions
             Permutations.append(list(permutation))
@@ -135,14 +92,14 @@ print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
     
-#drawString = ''
-#for permutation in Permutations :
-#    drawString += '"'
-#    for i in range(1, len(permutation) - 1) :
-#        drawString += str(permutation[i])
-#        if i != len(permutation) - 2 :
-#            drawString += ","
-#    drawString += '" '
-#    
-#print("\nDraw_Canvas( ", drawString, ")")
-#os.system('python canvas.py ' + drawString)
+drawString = ''
+for permutation in Permutations :
+    drawString += '"'
+    for i in range(1, len(permutation) - 1) :
+        drawString += str(permutation[i])
+        if i != len(permutation) - 2 :
+            drawString += ","
+    drawString += '" '
+    
+print("\nDraw_Canvas( ", drawString, ")")
+os.system('python canvas.py ' + drawString)
