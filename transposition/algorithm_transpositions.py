@@ -87,19 +87,20 @@ while(breakPoints(permutation) > 0) :
             Permutations.append(list(permutation))
             transpositions += 1
     
-print("\nTotal de transposições até a identidade:", transpositions)
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
     
-drawString = ''
-for permutation in Permutations :
-    drawString += '"'
-    for i in range(1, len(permutation) - 1) :
-        drawString += str(permutation[i])
-        if i != len(permutation) - 2 :
-            drawString += ","
-    drawString += '" '
-    
-print("\nDraw_Canvas( ", drawString, ")")
-os.system('python canvas.py ' + drawString)
+print("\nTotal de transposições até a identidade:", transpositions)
+
+#drawString = ''
+#for permutation in Permutations :
+#    drawString += '"'
+#    for i in range(1, len(permutation) - 1) :
+#        drawString += str(permutation[i])
+#        if i != len(permutation) - 2 :
+#            drawString += ","
+#    drawString += '" '
+#    
+#print("\nDraw_Canvas( ", drawString, ")")
+#os.system('python canvas.py ' + drawString)
