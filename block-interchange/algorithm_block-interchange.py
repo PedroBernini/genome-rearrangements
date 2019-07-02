@@ -85,6 +85,15 @@ def reWrite(permutation) :
     newPermutation = sequence
     return newPermutation
 
+def mapDecreasingStrip(permutation, bkpMap) :
+    stripMap = []
+    for i in range(0, len(bkpMap) - 1) :
+        start = bkpMap[i][1]
+        end = bkpMap[i+1][0]
+        if (permutation[start] - permutation[start + 1] == 1) :
+            stripMap.append([start, end])
+    return stripMap
+
 def blockInterchange(i, j, k, l) :
     resultTransposition = [] 
     if j > k :
@@ -100,40 +109,50 @@ def blockInterchange(i, j, k, l) :
     for m in range(l, len(permutation)) :
         resultTransposition.append(permutation[m])
     return resultTransposition
+
+
    
 # ----- ALGORITMO ----- #
 bkpMap = []
-Permutations = [list(permutation)]
-transpositions = 0
+Permutations = [(list(permutation), "Original")]
+blocksInterchanges = 0
 
 print("\nPermutação:", permutation)
 print("Quantidade de breakPoints:", breakPoints(permutation))
 print("Mapa de breakPoints:", bkpMap);
 
 # Algorithm
-#while(breakPoints(permutation) > 0) :
-if hasDecreasingStrip(permutation,bkpMap) == True :
-    #    Para cada strip decrescente, faça virar crescente com block-interchange
-    pass
-else :
-    #    Reescrever permutação
-    permutation = reWrite(permutation)
-    Permutations.append((permutation,"ReWrite"))
-    #    Mapear BkpMap
-    breakPoints(permutation)
-    print("\nNova Permutação:", permutation)
-    if hasDecreasingStrip(permutation,bkpMap) == False :
-        #    Se não tem strip decrescente, então faça um block-interchange que remova um breakpoint
-        for i in range(0, len(permutation)) :
-            if permutation[i] != len(permutation) - 1 :
-                permutation = blockInterchange(i+1, i+2, permutation.index(permutation[i]+1), permutation.index(permutation[i]+1)+1)
+while(breakPoints(permutation) > 0) :
+    if hasDecreasingStrip(permutation,bkpMap) == True :
+        #    Para cada strip decrescente, faça virar crescente com block-interchange
+        mapStrip = mapDecreasingStrip(permutation, bkpMap)
+        for strip in mapStrip :
+            while (strip[1] > strip[0]) :
+                permutation = blockInterchange(strip[0], strip[0] + 1, strip[1], strip[1] + 1)
                 Permutations.append(permutation)
-                break
-                
-print("\nTotal de troca de blocos até a identidade:", transpositions)
+                blocksInterchanges += 1
+                strip[0] += 1
+                strip[1] -= 1
+    else :
+        #    Reescrever permutação
+        permutation = reWrite(permutation)
+        Permutations.append((permutation,"ReWrite"))
+        #    Mapear BkpMap
+        breakPoints(permutation)
+        if hasDecreasingStrip(permutation,bkpMap) == False :
+            #    Se não tem strip decrescente, então faça um block-interchange que remova um breakpoint
+            for i in range(0, len(permutation)) :
+                if permutation[i] != len(permutation) - 1 :
+                    permutation = blockInterchange(i+1, i+2, permutation.index(permutation[i]+1), permutation.index(permutation[i]+1)+1)
+                    Permutations.append(permutation)
+                    blocksInterchanges += 1
+                    break
+    
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
+    
+print("\nTotal de troca de blocos até a identidade:", blocksInterchanges)
     
 #drawString = ''
 #for permutation in Permutations :
