@@ -119,7 +119,91 @@ def blockInterchange(i, j, k, l) :
         resultTransposition.append(permutation[m])
     return resultTransposition
 
+# -------------------------------- CICLOS ------------------------------------ #
+permutacao = list(permutation)
+permutacao.remove(0)
+permutacao.remove(len(permutation) - 1)
+n = len(permutacao)
+ultimo = None
 
+# ----- CRIAÇÃO DAS LINHAS PRETAS (TUPLAS) ----- #
+linhasPretas = []
+for i in range(0, len(permutacao)) :
+    if i == 0 :
+        linhasPretas.append((0, permutacao[i] * -1))
+        linhasPretas.append((permutacao[i], permutacao[i + 1] * -1))
+    elif i == len(permutacao) - 1 :
+        linhasPretas.append((permutacao[i], ultimo))
+    else :
+        linhasPretas.append((permutacao[i], permutacao[i + 1] * -1))
+
+# ----- CRIAÇÃO DOS VÉRTICES ----- #
+listaVertices = []
+for tupla in linhasPretas :
+    listaVertices.append(tupla[0])
+    listaVertices.append(tupla[1])
+
+# ----- CRIAÇÃO DAS ARESTAS (CONEXÕES) ----- #
+listaArestas = []
+for tupla in linhasPretas :
+    listaArestas.append((tupla[0], tupla[1]))
+for i in range(0, len(linhasPretas)) :
+        listaArestas.append((i,(i+1) * -1))
+
+# ----- CRIAÇÃO DAS LIGAÇÕES ----- #
+posicoes = []
+for i in range(0,len(linhasPretas)) :
+    tupla = linhasPretas[i]
+    posicoes.append((i, 0, tupla[0]))
+    posicoes.append((i, 1, tupla[1]))
+    
+ligacoes = []
+for aresta in listaArestas :
+    primeiro = aresta[0]
+    segundo = aresta[1]
+    posicaoPrimeiro = None
+    posicaoSegundo = None
+    for el in posicoes :
+        if el[2] == primeiro :
+            posicaoPrimeiro = (el[0], el[1])
+        elif el[2] == segundo :
+            posicaoSegundo = (el[0], el[1])
+    ligacoes.append([posicaoPrimeiro, posicaoSegundo])
+    
+# ----- CRIAÇÃO DOS CICLOS ----- #
+ciclos = []
+visitados = []
+for ligacao in ligacoes :
+    direcoes = []
+    ondeComecei = ligacao[0]
+    ondeEstou = ligacao[0]
+    ondeVou = ligacao[1]
+
+    while ondeEstou not in visitados :
+        visitados.append(ondeEstou)
+        if ondeEstou[0] == ondeVou[0] : #Linha preta
+            if ondeEstou[1] < ondeVou[1] : #Para a direita
+                direcoes.append((linhasPretas[ondeEstou[0]][ondeEstou[1]], linhasPretas[ondeVou[0]][ondeVou[1]], "Direita"))
+                
+            else : #Para a esquerda
+                direcoes.append((linhasPretas[ondeEstou[0]][ondeEstou[1]], linhasPretas[ondeVou[0]][ondeVou[1]],"Esquerda"))
+                
+        for el in ligacoes :
+            if el[0] == ondeVou :
+                if el[1] != ondeEstou :
+                    ondeEstou = ondeVou
+                    ondeVou = el[1]
+                    break
+            elif el[1] == ondeVou :
+                if el[0] != ondeEstou :
+                    ondeEstou = ondeVou
+                    ondeVou = el[0]
+                    break
+            
+    if direcoes != [] :
+        ciclos.append(direcoes)
+
+# ---------------------------------------------------------------------------- #
    
 # ----- ALGORITMO ----- #
 bkpMap = []
@@ -127,12 +211,13 @@ Permutations = [(list(permutation), "Original")]
 #Permutations = [list(permutation)]
 blocksInterchanges = 0
 qtdBreakPoints = qtdmapBreakPoints(permutation)
-lowerBound = math.ceil(qtdBreakPoints / 3)
+lowerBound = math.ceil((n+1-len(ciclos))/2)
 
-print("\nPermutação:", permutation)
+print("\nn =", n)
+print("Permutação:", permutation)
+print("A permutação possui", len(ciclos), "ciclo(s).")
 print("Quantidade de breakPoints:", qtdBreakPoints)
 print("Mapa de breakPoints:", bkpMap);
-
 
 # Algorithm
 while(mapBreakPoints(permutation) > 0) :
@@ -168,7 +253,10 @@ for el in Permutations :
 print("\nQuantidade mínima de troca de blocos:", lowerBound)
 print("Total de troca de blocos até a identidade:", blocksInterchanges)
 
-print("\nAproximação do algoritmo:", blocksInterchanges/lowerBound)
+if lowerBound == 0 :
+    print("\nAproximação do algoritmo: Nula")
+else :
+    print("\nAproximação do algoritmo:", blocksInterchanges/lowerBound)
     
 #drawString = ''
 #for permutation in Permutations :
