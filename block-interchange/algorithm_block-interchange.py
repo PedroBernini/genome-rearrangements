@@ -148,10 +148,7 @@ while(mapBreakPoints(permutation) > 0) :
                 strip[1] -= 1
     else :
         #    Reescrever permutação
-        print("-------------------------------------")
-        print("A permutação era:", permutation)
         permutation = reWrite(permutation)
-        print("A permutação passou a ser", permutation)
         Permutations.append((permutation,"ReWrite"))
         #    Mapear BkpMap
         mapBreakPoints(permutation)
