@@ -115,6 +115,7 @@ def blockInterchange(i, j, k, l) :
 # ----- ALGORITMO ----- #
 bkpMap = []
 Permutations = [(list(permutation), "Original")]
+#Permutations = [list(permutation)]
 blocksInterchanges = 0
 
 print("\nPermutação:", permutation)
@@ -154,14 +155,14 @@ for el in Permutations :
     
 print("\nTotal de troca de blocos até a identidade:", blocksInterchanges)
     
-#drawString = ''
-#for permutation in Permutations :
-#    drawString += '"'
-#    for i in range(1, len(permutation) - 1) :
-#        drawString += str(permutation[i])
-#        if i != len(permutation) - 2 :
-#            drawString += ","
-#    drawString += '" '
-#    
-#print("\nDraw_Canvas( ", drawString, ")")
-#os.system('python canvas.py ' + drawString)
+drawString = ''
+for permutation in Permutations :
+    drawString += '"'
+    for i in range(1, len(permutation) - 1) :
+        drawString += str(permutation[i])
+        if i != len(permutation) - 2 :
+            drawString += ","
+    drawString += '" '
+    
+print("\nDraw_Canvas( ", drawString, ")")
+os.system('python canvas.py ' + drawString)
