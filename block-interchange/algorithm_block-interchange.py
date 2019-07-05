@@ -3,6 +3,7 @@
 
 import sys
 import os
+import math
 
 # ----- PERMUTAÇÃO (LINHA DE COMANDO) ----- #
 permutation = []
@@ -23,8 +24,16 @@ def isAdjacent(a, b) :
         return True
     else :
         return False
+    
+def qtdmapBreakPoints(permutation) :
+    breakPoints = 0
+    for i in range(0, len(permutation)-1) :
+        if permutation[i] + 1 != permutation[i+1] :
+            breakPoints += 1
+            bkpMap.append((i,i+1))
+    return breakPoints
 
-def breakPoints(permutation) :
+def mapBreakPoints(permutation) :
     bkpMap.clear()
     breakPoints = 0
     for i in range(0, len(permutation)-1) :
@@ -74,7 +83,7 @@ def reWrite(permutation) :
             sequence.append(newPermutation[i])
         elif isAdjacent(newPermutation[i+1], newPermutation[i]) == False :
             sequence.append(newPermutation[i])
-    k = 1
+    k = 0
     while (k != len(sequence)) :
         if k in sequence :
             k += 1
@@ -117,13 +126,16 @@ bkpMap = []
 Permutations = [(list(permutation), "Original")]
 #Permutations = [list(permutation)]
 blocksInterchanges = 0
+qtdBreakPoints = qtdmapBreakPoints(permutation)
+lowerBound = math.ceil(qtdBreakPoints / 3)
 
 print("\nPermutação:", permutation)
-print("Quantidade de breakPoints:", breakPoints(permutation))
+print("Quantidade de breakPoints:", qtdBreakPoints)
 print("Mapa de breakPoints:", bkpMap);
 
+
 # Algorithm
-while(breakPoints(permutation) > 0) :
+while(mapBreakPoints(permutation) > 0) :
     if hasDecreasingStrip(permutation,bkpMap) == True :
         #    Para cada strip decrescente, faça virar crescente com block-interchange
         mapStrip = mapDecreasingStrip(permutation, bkpMap)
@@ -136,10 +148,13 @@ while(breakPoints(permutation) > 0) :
                 strip[1] -= 1
     else :
         #    Reescrever permutação
+        print("-------------------------------------")
+        print("A permutação era:", permutation)
         permutation = reWrite(permutation)
+        print("A permutação passou a ser", permutation)
         Permutations.append((permutation,"ReWrite"))
         #    Mapear BkpMap
-        breakPoints(permutation)
+        mapBreakPoints(permutation)
         if hasDecreasingStrip(permutation,bkpMap) == False :
             #    Se não tem strip decrescente, então faça um block-interchange que remova um breakpoint
             for i in range(0, len(permutation)) :
@@ -152,17 +167,20 @@ while(breakPoints(permutation) > 0) :
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
+
+print("\nQuantidade mínima de troca de blocos:", lowerBound)
+print("Total de troca de blocos até a identidade:", blocksInterchanges)
+
+print("\nAproximação do algoritmo:", blocksInterchanges/lowerBound)
     
-print("\nTotal de troca de blocos até a identidade:", blocksInterchanges)
-    
-drawString = ''
-for permutation in Permutations :
-    drawString += '"'
-    for i in range(1, len(permutation) - 1) :
-        drawString += str(permutation[i])
-        if i != len(permutation) - 2 :
-            drawString += ","
-    drawString += '" '
-    
-print("\nDraw_Canvas( ", drawString, ")")
-os.system('python canvas.py ' + drawString)
+#drawString = ''
+#for permutation in Permutations :
+#    drawString += '"'
+#    for i in range(1, len(permutation) - 1) :
+#        drawString += str(permutation[i])
+#        if i != len(permutation) - 2 :
+#            drawString += ","
+#    drawString += '" '
+#    
+#print("\nDraw_Canvas( ", drawString, ")")
+#os.system('python canvas.py ' + drawString)
