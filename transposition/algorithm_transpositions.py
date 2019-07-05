@@ -80,27 +80,30 @@ print("Mapa de breakPoints:", bkpMap);
 # SelectionSort Algorithm
 while(breakPoints(permutation) > 0) :
     for i in range(0, len(permutation)) :
-        if(permutation[i] != i) :
-            adjacents = sequenceAdjacents(i)
-            resultTranspositions = transposition(i, i+adjacents, permutation[i]+adjacents)
-            permutation = resultTranspositions
-            Permutations.append(list(permutation))
-            transpositions += 1
-    
+        for el in permutation :
+            if i == el and i != permutation[i] :
+                index = permutation.index(el)
+                adjacents = sequenceAdjacents(index)
+                resultTranspositions = transposition(index, index+adjacents, el)
+                permutation = resultTranspositions
+                Permutations.append(list(permutation))
+                transpositions += 1
+                break
+
 print("\nSequência de Permutações:")
 for el in Permutations :
     print(el)
     
 print("\nTotal de transposições até a identidade:", transpositions)
 
-#drawString = ''
-#for permutation in Permutations :
-#    drawString += '"'
-#    for i in range(1, len(permutation) - 1) :
-#        drawString += str(permutation[i])
-#        if i != len(permutation) - 2 :
-#            drawString += ","
-#    drawString += '" '
-#    
-#print("\nDraw_Canvas( ", drawString, ")")
-#os.system('python canvas.py ' + drawString)
+drawString = ''
+for permutation in Permutations :
+    drawString += '"'
+    for i in range(1, len(permutation) - 1) :
+        drawString += str(permutation[i])
+        if i != len(permutation) - 2 :
+            drawString += ","
+    drawString += '" '
+    
+print("\nDraw_Canvas( ", drawString, ")")
+os.system('python canvas.py ' + drawString)
