@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import random
 import os
@@ -8,41 +9,57 @@ import torch.optim as optim
 import torch.autograd as autograd
 from torch.autograd import Variable
 
-def isIdentity(permutation) :
-    for i in range(0, len(permutation)) :
-        if i+1 != permutation[i] :
+def saveNetwork(model):
+    torch.save({'state_dict': model.state_dict()}, 'network.pth')
+    if os.path.isfile('network.pth'):
+        print("Rede salva com sucesso!")
+    else:
+        print("Erro ao salvar a rede!")
+    
+def loadNetwork():
+    global model
+    if os.path.isfile('network.pth'):
+        checkpoint = torch.load('network.pth')
+        model.load_state_dict(checkpoint['state_dict'])
+        print("Rede carregada com sucesso!")
+    else:
+        print("Erro ao carregar a rede!")
+
+def isIdentity(pi):
+    for i in range(0, len(pi)) :
+        if i+1 != pi[i] :
             return False
     return True
 
-def numberReversals(n) :
+def numberReversals(n):
     reversals = []
-    for i in range(0,n) :
-        for j in range(i+1, n) :
+    for i in range(0,n):
+        for j in range(i+1, n):
             reversals.append((i,j))
     return reversals
 
-def getSigmas(length, permutation) :
+def getSigmas(length, pi):
     reversals = numberReversals(length)
     sigmas = []
     for rev in reversals:
-        sigmas.append(reversal(rev[0], rev[1], permutation))
+        sigmas.append(reversal(rev[0], rev[1], pi))
     return sigmas
 
-def reversal(i, j, permutation) :
-    resultReversal = list(permutation)
+def reversal(i, j, pi):
+    resultReversal = list(pi)
     strip = []
-    if(i>j) :
+    if(i>j):
         temp = i
         i = j
         j = temp
-    for k in range(i,j+1) :
+    for k in range(i,j+1):
         strip.append(resultReversal[k]) 
     strip.reverse();
-    for k in range(i,j+1) :
+    for k in range(i,j+1):
         resultReversal[k] = strip[k-i]
     return resultReversal
 
-def join(pi, sigma) :
+def join(pi, sigma):
     state = []
     for el in pi:
         state.append(el)
@@ -58,52 +75,60 @@ class Network(nn.Module):
         self.nb_action = nb_action
         self.hidden_size = hidden_size
         
-        # Quantidade de neurônios na camada de entrada: 3 (input_size)
-        # Quantidade de neurônios na camada oculta: 8 (hidden_size)
-        # Quantidade de neurônios na camada de saída: 3 (nb_action)
-        self.fc1 = nn.Linear(input_size, hidden_size) # Ligação da camada de entrada até a camada oculta
+        # Neurônios na camada de entrada -> input_size
+        # Neurônios na camada oculta -> hidden_size
+        # Neurônios na camada de saída -> nb_action
+        self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, nb_action)
         
     def forward(self, state): # O estado representa as entradas da rede neural
         # Funcão de ativação -> Relu
         x = F.relu(self.fc1(state)) # Aplicação da função de ativação (camada de entrada -> camada oculta)
-        q_values = torch.sigmoid(self.fc2(x)) # Resultado da aplicação da função de ativação
+        q_values = torch.tanh (self.fc2(x)) # Resultado da aplicação da função de ativação
         return q_values # Retorna os valores finais da rede neural
     
-permutation = [2,3,1]
+startState = []
+for el in sys.argv[1].split(",") :
+    element = int(el)
+    startState.append(element)
 
-input_size = len(permutation) * 2
-hidden_size = 8
+input_size = len(startState) * 2
+hidden_size = 10
 output_size = 1
 model = Network(input_size, hidden_size, output_size)
 
-arrayMap = []
+for epoca in range(1):
+    pi = startState
+    arrayMap = []
+    while (isIdentity(pi) == False):
+        results = []
+        choices = []
+        sigmas = getSigmas(len(pi), pi)
+        print("\nEstado Atual -> ", pi)
+        for sigma in sigmas:
+            state = join(pi, sigma)
+            state = torch.Tensor(state).float().unsqueeze(0)
+            valueExit = model(Variable(state)).item()
+            results.append(valueExit)
+            choices.append(sigma)
+            print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
+        
+        nextState = sigmas[results.index(max(results))]
+        biggerScore = results[results.index(max(results))]
+        choices.append(nextState)
+        escolha = random.choice(choices)
+        arrayMap.append((pi, escolha, biggerScore))
+        pi = escolha
+        print("Estado com melhor pontuação ->", nextState, "\tScore:", '{:.4f}'.format(biggerScore))
+        print("Estado escolhido: ", escolha)
+        
+        print("---------------------------------------------------------------------")
 
-while (isIdentity(permutation) == False):
-    results = []
-    sigmas = getSigmas(len(permutation), permutation)
-    print("\nEstado Atual -> ", permutation)
-    for sigma in sigmas:
-        state = join(permutation, sigma)
-        state = torch.Tensor(state).float().unsqueeze(0)
-        valueExit = model(Variable(state)).item()
-        results.append(valueExit)
-        print("Estado Adjacente:", sigma, "\t", "Valor da Saída:", valueExit, "\t[", sigmas.index(sigma), "]" )
-    
-    nextState = sigmas[results.index(max(results))]
-    biggerScore = results[results.index(max(results))]
-    arrayMap.append((permutation, nextState, biggerScore))
-    print("Estado com melhor pontuação ->", nextState, "\tScore:", biggerScore)
-    permutation = nextState
-    print("---------------------------------------------------------------------")
-    
-print("\nMapa Percorrido: ")
-for el in arrayMap:
-    print(el[0], "-->", el[1], "\tScore:", el[2])
 
-
-
-
+    print("\nEstado inicial", startState)
+    print("Mapa Percorrido: ")
+    for el in arrayMap:
+        print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
 
 
 
