@@ -38,13 +38,6 @@ def numberReversals(n):
             reversals.append((i,j))
     return reversals
 
-def getSigmas(length, pi):
-    reversals = numberReversals(length)
-    sigmas = []
-    for rev in reversals:
-        sigmas.append(reversal(rev[0], rev[1], pi))
-    return sigmas
-
 def reversal(i, j, pi):
     resultReversal = list(pi)
     strip = []
@@ -59,6 +52,13 @@ def reversal(i, j, pi):
         resultReversal[k] = strip[k-i]
     return resultReversal
 
+def getSigmas(length, pi):
+    reversals = numberReversals(length)
+    sigmas = []
+    for rev in reversals:
+        sigmas.append(reversal(rev[0], rev[1], pi))
+    return sigmas
+
 def join(pi, sigma):
     state = []
     for el in pi:
@@ -67,25 +67,40 @@ def join(pi, sigma):
         state.append(el)
     return state
 
-# Estrutura da arquitetura da rede neural
+def markovDecision(choices, intention, length, temperature):
+    lower = (100 / length)
+    if temperature < lower:
+        temperature = lower
+    elif temperature > 100:
+        temperature = 100
+    temperature = temperature / 100
+    choices.remove(intention)
+    escolha = random.choice(choices)
+    result = np.random.choice(a = [1, 2], size = 1, replace = True,
+                               p = [temperature, (1 - temperature)])
+    if result == 1:
+        return intention
+    else:
+        return escolha
+
 class Network(nn.Module):
-    def __init__(self, input_size, hidden_size, nb_action): # (quantidade de entradas, número de ações)
+    def __init__(self, input_size, hidden_size, nb_action):
         super(Network, self).__init__()
         self.input_size = input_size
         self.nb_action = nb_action
         self.hidden_size = hidden_size
         
-        # Neurônios na camada de entrada -> input_size
-        # Neurônios na camada oculta -> hidden_size
-        # Neurônios na camada de saída -> nb_action
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, nb_action)
         
-    def forward(self, state): # O estado representa as entradas da rede neural
-        # Funcão de ativação -> Relu
-        x = F.relu(self.fc1(state)) # Aplicação da função de ativação (camada de entrada -> camada oculta)
-        q_values = torch.tanh (self.fc2(x)) # Resultado da aplicação da função de ativação
-        return q_values # Retorna os valores finais da rede neural
+    def forward(self, state):
+        x = F.relu(self.fc1(state))
+        values = torch.tanh(self.fc2(x))
+        return values
+
+
+# ----------------------------------------------------------------
+        
     
 startState = []
 for el in sys.argv[1].split(",") :
@@ -113,17 +128,14 @@ for epoca in range(1):
             choices.append(sigma)
             print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
         
-        nextState = sigmas[results.index(max(results))]
         biggerScore = results[results.index(max(results))]
-        choices.append(nextState)
-        escolha = random.choice(choices)
-        arrayMap.append((pi, escolha, biggerScore))
-        pi = escolha
-        print("Estado com melhor pontuação ->", nextState, "\tScore:", '{:.4f}'.format(biggerScore))
-        print("Estado escolhido: ", escolha)
-        
+        intention = sigmas[results.index(max(results))]
+        nextState = markovDecision(choices, intention, len(choices), 50)
+        arrayMap.append((pi, nextState, biggerScore))
+        pi = nextState
+        print("Estado com melhor pontuação ->", intention, "\tScore:", '{:.4f}'.format(biggerScore))
+        print("Estado escolhido: ", nextState)
         print("---------------------------------------------------------------------")
-
 
     print("\nEstado inicial", startState)
     print("Mapa Percorrido: ")
