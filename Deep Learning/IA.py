@@ -10,7 +10,7 @@ import torch.autograd as autograd
 from torch.autograd import Variable
 
 def saveNetwork(model):
-    torch.save({'state_dict': model.state_dict()}, 'network.pth')
+    torch.save({'state_dict': model.state_dict()}, 'network5.pth')
     if os.path.isfile('network.pth'):
         print("Rede salva com sucesso!")
     else:
@@ -82,7 +82,19 @@ def markovDecision(choices, intention, length, temperature):
         return intention
     else:
         return escolha
-
+    
+def learn(inputs, targets):
+    global model
+    global optimizer
+    for i in range(0, len(inputs)):
+        output = model(inputs[i])
+        target = targets[i]
+        loss = F.smooth_l1_loss(output, target)
+        print("Erro:", loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
 class Network(nn.Module):
     def __init__(self, input_size, hidden_size, nb_action):
         super(Network, self).__init__()
@@ -111,36 +123,58 @@ input_size = len(startState) * 2
 hidden_size = 10
 output_size = 1
 model = Network(input_size, hidden_size, output_size)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-for epoca in range(1):
+for epoca in range(30000):
     pi = startState
-    arrayMap = []
+    tableScore = []
     while (isIdentity(pi) == False):
         results = []
         choices = []
         sigmas = getSigmas(len(pi), pi)
-        print("\nEstado Atual -> ", pi)
+#        print("\nEstado Atual -> ", pi)
         for sigma in sigmas:
             state = join(pi, sigma)
-            state = torch.Tensor(state).float().unsqueeze(0)
-            valueExit = model(Variable(state)).item()
+            state = torch.Tensor(state).unsqueeze(0)
+            valueExit = model(state).item()
             results.append(valueExit)
             choices.append(sigma)
-            print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
+#            print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
         
         biggerScore = results[results.index(max(results))]
         intention = sigmas[results.index(max(results))]
         nextState = markovDecision(choices, intention, len(choices), 50)
-        arrayMap.append((pi, nextState, biggerScore))
+        tableScore.append((pi, nextState, biggerScore))
         pi = nextState
-        print("Estado com melhor pontuação ->", intention, "\tScore:", '{:.4f}'.format(biggerScore))
-        print("Estado escolhido: ", nextState)
-        print("---------------------------------------------------------------------")
+#        print("Estado com melhor pontuação ->", intention, "\tScore:", '{:.4f}'.format(biggerScore))
+#        print("Estado escolhido: ", nextState)
+#        print("---------------------------------------------------------------------")
 
-    print("\nEstado inicial", startState)
-    print("Mapa Percorrido: ")
-    for el in arrayMap:
-        print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
+#    print("\nEstado inicial", startState)
+#    print("tableScorea Percorrido: ")
+#    for el in tableScore:
+#        print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
+        
+
+# ----------------------------------------------------------------
+        
+        
+    gamma = 0.9
+    inputs = []
+    targets = []
+    for i in range(0, len(tableScore)):
+        state = join(tableScore[i][0], tableScore[i][1])
+        inputs.append(torch.Tensor(state).float().unsqueeze(0))
+        if i == len(tableScore) - 1:
+            score = 1
+        else:
+            score = (float)(gamma * tableScore[i+1][2])
+        targets.append(torch.Tensor([score]).float().unsqueeze(0))
+#    print(inputs)
+#    print(targets)
+    learn(inputs, targets)
+saveNetwork(model)
+        
 
 
 
