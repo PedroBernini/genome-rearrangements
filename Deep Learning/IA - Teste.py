@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 def saveNetwork(model):
-    torch.save({'state_dict': model.state_dict()}, 'network5.pth')
+    torch.save({'state_dict': model.state_dict()}, 'network.pth')
     if os.path.isfile('network.pth'):
         print("Rede salva com sucesso!")
     else:
@@ -121,59 +121,40 @@ input_size = len(startState) * 2
 hidden_size = 10
 output_size = 1
 model = Network(input_size, hidden_size, output_size)
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-
 loadNetwork()
 
-for epoca in range(1000):
+for epoca in range(1):
     pi = startState
     tableScore = []
     while (isIdentity(pi) == False):
         results = []
         choices = []
         sigmas = getSigmas(len(pi), pi)
-#        print("\nEstado Atual -> ", pi)
+        print("\nEstado Atual -> ", pi)
         for sigma in sigmas:
             state = join(pi, sigma)
             state = torch.Tensor(state).unsqueeze(0)
             valueExit = model(state).item()
             results.append(valueExit)
             choices.append(sigma)
-#            print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
+            print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
         
         biggerScore = results[results.index(max(results))]
         intention = sigmas[results.index(max(results))]
-        nextState = markovDecision(choices, intention, len(choices), 50)
+        nextState = markovDecision(choices, intention, len(choices), 100)
         tableScore.append((pi, nextState, biggerScore))
         pi = nextState
-#        print("Estado com melhor pontuação ->", intention, "\tScore:", '{:.4f}'.format(biggerScore))
-#        print("Estado escolhido: ", nextState)
-#        print("---------------------------------------------------------------------")
+        print("Estado com melhor pontuação ->", intention, "\tScore:", '{:.4f}'.format(biggerScore))
+        print("Estado escolhido: ", nextState)
+        print("---------------------------------------------------------------------")
 
-#    print("\nEstado inicial", startState)
-#    print("tableScorea Percorrido: ")
-#    for el in tableScore:
-#        print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
+    print("\nEstado inicial", startState)
+    print("tableScore: ")
+    for el in tableScore:
+        print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
         
 
 # ----------------------------------------------------------------
-        
-        
-    gamma = 0.9
-    inputs = []
-    targets = []
-    for i in range(0, len(tableScore)):
-        state = join(tableScore[i][0], tableScore[i][1])
-        inputs.append(torch.Tensor(state).float().unsqueeze(0))
-        if i == len(tableScore) - 1:
-            score = 1
-        else:
-            score = (float)(gamma * tableScore[i+1][2])
-        targets.append(torch.Tensor([score]).float().unsqueeze(0))
-#    print(inputs)
-#    print(targets)
-    learn(inputs, targets)
-saveNetwork(model)
         
 
 
