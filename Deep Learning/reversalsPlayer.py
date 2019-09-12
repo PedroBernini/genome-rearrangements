@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import random
 import os
@@ -24,7 +23,9 @@ class Network(nn.Module):
 
 class Jogador(object):
     def __init__(self, startState, gamma, temperature, memoryCapacity):
-        input_size = len(startState) * 2
+#        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.permutation_size = len(startState)
+        input_size = self.permutation_size * 2
         hidden_size = 10
         output_size = 1
         self.startState = startState
@@ -32,11 +33,12 @@ class Jogador(object):
         self.temperature = temperature
         self.memoryCapacity = memoryCapacity
         self.model = Network(input_size, hidden_size, output_size)
+#        self.model.to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         
     def setTemperature(self, temperature):
         self.temperature = temperature
-    
+        
     def setStartState(self, startState):
         self.startState = startState
     
@@ -57,9 +59,7 @@ class Jogador(object):
         resultReversal = list(pi)
         strip = []
         if(i>j):
-            temp = i
-            i = j
-            j = temp
+            i, j = j, i
         for k in range(i,j+1):
             strip.append(resultReversal[k]) 
         strip.reverse();
@@ -67,23 +67,19 @@ class Jogador(object):
             resultReversal[k] = strip[k-i]
         return resultReversal
 
-    def getSigmas(self, length, pi):
-        reversals = self.numberReversals(length)
+    def getSigmas(self, pi):
+        reversals = self.numberReversals(len(pi))
         sigmas = []
         for rev in reversals:
             sigmas.append(self.reversal(rev[0], rev[1], pi))
         return sigmas
 
     def join(self, pi, sigma):
-        state = []
-        for el in pi:
-            state.append(el)
-        for el in sigma:
-            state.append(el)
+        state = pi + sigma
         return state
     
-    def markovDecision(self, choices, intention, length, temperature):
-        lower = (100 / length)
+    def markovDecision(self, choices, intention, temperature):
+        lower = (100 / len(choices))
         if temperature < lower:
             temperature = lower
         elif temperature > 100:
@@ -103,7 +99,7 @@ class Jogador(object):
             output = self.model(inputs[i])
             target = targets[i]
             loss = F.smooth_l1_loss(output, target)
-            print("Erro:", loss.item())
+#            print("Erro:", loss.item())
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -126,37 +122,30 @@ class Jogador(object):
             print("Erro ao carregar a rede!")
     
     def runEpocas(self, length):
+        cont = 0
         for epoca in range(length):
+            cont += 1
+            print("Época:", cont, "/", length)
             pi = self.startState
             tableScore = []
             while (self.isIdentity(pi) == False):
                 results = []
                 choices = []
-                sigmas = self.getSigmas(len(pi), pi)
-#                print("\nEstado Atual -> ", pi)
+                sigmas = self.getSigmas(pi)
                 for sigma in sigmas:
                     state = self.join(pi, sigma)
                     state = torch.Tensor(state).unsqueeze(0)
                     valueExit = self.model(state).item()
                     results.append(valueExit)
                     choices.append(sigma)
-#                    print("Para:", sigma, "\t", "Saída:", '{:.4f}'.format(valueExit))
                 
-                biggerScore = results[results.index(max(results))]
-                intention = sigmas[results.index(max(results))]
-                nextState = self.markovDecision(choices, intention, len(choices), self.temperature)
+                biggerScore = max(results)
+                intention = sigmas[results.index(biggerScore)]
+                nextState = self.markovDecision(choices, intention, self.temperature)
                 tableScore.append((pi, nextState, biggerScore))
                 if len(tableScore) > self.memoryCapacity:
                     del tableScore[0]
                 pi = nextState
-#                print("Estado com melhor pontuação ->", intention, "\tScore:", '{:.4f}'.format(biggerScore))
-#                print("Estado escolhido: ", nextState)
-#                print("---------------------------------------------------------------------")
-        
-            print("\nEstado inicial", self.startState)
-            print("Caminho Percorrido: ")
-            for el in tableScore:
-                print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
                 
             inputs = []
             targets = []
@@ -169,6 +158,12 @@ class Jogador(object):
                     score = (float)(self.gamma * tableScore[i+1][2])
                 targets.append(torch.Tensor([score]).float().unsqueeze(0))
             self.learn(inputs, targets)
+    
+#    def easyTrain(self):
+#        start = []
+#        for i in range (1, self.permutation_size + 1):
+#            start.append(i)
+#        sigmas = self.getSigmas(start)
             
     def goIdentity(self, start):
         pi = start
@@ -177,15 +172,15 @@ class Jogador(object):
             print("Caminhando...")
             results = []
             choices = []
-            sigmas = self.getSigmas(len(pi), pi)
+            sigmas = self.getSigmas(pi)
             for sigma in sigmas:
                 state = self.join(pi, sigma)
                 state = torch.Tensor(state).unsqueeze(0)
                 valueExit = self.model(state).item()
                 results.append(valueExit)
                 choices.append(sigma)
-            biggerScore = results[results.index(max(results))]
-            intention = sigmas[results.index(max(results))]
+            biggerScore = max(results)
+            intention = sigmas[results.index(biggerScore)]
             nextState = intention
             tableScore.append((pi, nextState, biggerScore))
             pi = nextState
@@ -203,17 +198,17 @@ idiota = Jogador(startState, 0.9, 50, 100)
 idiota.runEpocas(200)
 
 idiota.setStartState([2,3,1])
-idiota.runEpocas(200)
+idiota.runEpocas(400)
 
 idiota.setStartState([3,1,2])
 idiota.setTemperature(80)
-idiota.runEpocas(200)
+idiota.runEpocas(600)
 
 idiota.saveNetwork("idiotaNetwork")
 
-idiota.goIdentity([2,1,3])
-
-
+idiota.goIdentity([3,2,1])
+#
+#
 #idiota2 = Jogador(startState, 0.9, 50, 100)
 #idiota2.loadNetwork("idiotaNetwork")
 
