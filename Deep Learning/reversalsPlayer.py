@@ -127,10 +127,8 @@ class Jogador(object):
             print("Erro ao carregar a rede!")
     
     def runEpocas(self, length):
-        cont = 0
         for epoca in range(length):
-            cont += 1
-            print("Época:", cont, "/", length)
+            print("Época:", epoca, "/", length)
             pi = self.startState
             tableScore = []
             moves = 0
@@ -153,7 +151,9 @@ class Jogador(object):
                 if len(tableScore) > self.memoryCapacity:
                     del tableScore[0]
                 pi = nextState
-            
+#            print("TableScore: ")
+#            for el in tableScore:
+#                print(el)
             if (self.isIdentity(pi) == True):
                 inputs = []
                 targets = []
@@ -191,8 +191,9 @@ class Jogador(object):
 #            self.setStartState(start)
 #            self.runEpocas(epocas)
                 
-    def easyTrain(self, repetitions, epocas):
+    def easyTrain(self, repetitions):
         for repetition in range(repetitions):
+            print("Repetição:", repetition, "/", repetitions)
             identity = []
             for i in range (1, self.permutation_size + 1):
                 identity.append(i)
@@ -202,35 +203,51 @@ class Jogador(object):
                 nexts.append(sigma)
             start = random.choice(nexts)
             self.setStartState(start)
+#            print("Começei aki", start)
+            pi = self.startState
+            tableScore = []
+            state = self.join(start, identity)
+            state = torch.Tensor(state).unsqueeze(0)
+            valueExit = self.model(state).item()
+            tableScore.append((start, identity, valueExit))
+            moves = 0
+            while (moves < self.movesLimit) and (self.isIdentity(pi) == False):
+                moves += 1
+                results = []
+                choices = []
+                sigmas = self.getSigmas(pi)
+                for sigma in sigmas:
+                    state = self.join(pi, sigma)
+                    state = torch.Tensor(state).unsqueeze(0)
+                    valueExit = self.model(state).item()
+                    results.append(valueExit)
+                    choices.append(sigma)
+                
+                biggerScore = max(results)
+                intention = sigmas[results.index(biggerScore)]
+                nextState = self.markovDecision(choices, intention, self.temperature)
+#                    print("Estou indo para:", nextState)
+                
+                state = self.join(nextState, pi)
+#                    print("Como coloco:", state)
+                state = torch.Tensor(state).unsqueeze(0)
+                valueExit = self.model(state).item()
+#                    print("Meu valor de ida:", biggerScore)
+#                    print("Meu valor de volta:", valueExit)
+#                    print("\n")
+                tableScore.append((nextState, pi, valueExit))
+                if len(tableScore) > self.memoryCapacity:
+                    del tableScore[0]
+                pi = nextState
+#                print("TableScore: ")
+#                for el in tableScore:
+#                    print(el)
+            tableScore.reverse()
+#                print("TableScore (REVERSE): ")
+#                for el in tableScore:
+#                    print(el)
             
-            cont = 0
-            for epoca in range(epocas):
-                cont += 1
-                print("Época:", cont, "/", length)
-                pi = self.startState
-                tableScore = []
-                moves = 0
-                while (moves < self.movesLimit) and (self.isIdentity(pi) == False):
-                    moves += 1
-                    results = []
-                    choices = []
-                    sigmas = self.getSigmas(pi)
-                    for sigma in sigmas:
-                        state = self.join(pi, sigma)
-                        state = torch.Tensor(state).unsqueeze(0)
-                        valueExit = self.model(state).item()
-                        results.append(valueExit)
-                        choices.append(sigma)
-                    
-                    biggerScore = max(results)
-                    intention = sigmas[results.index(biggerScore)]
-                    nextState = self.markovDecision(choices, intention, self.temperature)
-                    tableScore.append((pi, nextState, biggerScore))
-                    if len(tableScore) > self.memoryCapacity:
-                        del tableScore[0]
-                    pi = nextState
-            
-            if (self.isIdentity(pi) == True):
+            if (self.isIdentity(pi) == False):
                 inputs = []
                 targets = []
                 for i in range(0, len(tableScore)):
@@ -241,10 +258,13 @@ class Jogador(object):
                     else:
                         score = (float)(self.gamma * tableScore[i+1][2])
                     targets.append(torch.Tensor([score]).float().unsqueeze(0))
+#                print("Inputs:")
+#                for el in inputs:
+#                    print(el)
+#                print("Targets:")
+#                for el in targets:
+#                    print(el)
                 self.learn(inputs, targets)
-                print("Chegou na Identidade!")
-            else:
-                print("Falhou em chegar na Identidade!")
         
     def goIdentity(self, start):
         pi = start
@@ -278,29 +298,15 @@ class Jogador(object):
 # ----------------------------------------------------------------
 
 # -- Jogador (Estado Inicial, Fator de desconto, Temperatura, Limite de Movimentos, Memoria para Backpropagation) --
-#idiota = Jogador([7,3,5,1,6,2,4], 0.9, 50, 10, 100)
-#idiota.easyTrain(10,100)
-#idiota.easyTrain(2,1,100)
-#idiota.easyTrain(3,1,100)
-#idiota.easyTrain(4,1,100)
-#idiota.runEpocas(1000)
-#idiota.saveNetwork("network7")
-#
-#idiota.setStartState([2,3,1])
-#idiota.runEpocas(400)
-#
-#idiota.setStartState([3,1,2])
-#idiota.setTemperature(80)
-#idiota.runEpocas(600)
-#
+idiota = Jogador([5,3,1,7,6,2,4], 0.9, 50, 200, 100)
+idiota.easyTrain(100)
+idiota.runEpocas(100)
+#idiota.goIdentity([2,4,1,7,6,5,3])
+
 #idiota.saveNetwork("idiotaNetwork")
-#
+
 #idiota.goIdentity([3,1,2])
 
 #idiota2 = Jogador([7,3,5,1,6,2,4], 0.9, 50, 1000, 100)
 #idiota2.loadNetwork("network7")
 #idiota2.goIdentity([3,1,5,2,4,7,6])
-            
-teste = Jogador([2,3,1], 0.9, 50, 10, 100)
-teste.runEpocas(1000)
-teste.goIdentity([3,1,2])
