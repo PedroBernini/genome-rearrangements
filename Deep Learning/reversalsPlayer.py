@@ -22,13 +22,13 @@ class Network(nn.Module):
         return values
 
 class Jogador(object):
-    def __init__(self, startState, gamma, temperature, movesLimit, memoryCapacity):
-        self.permutation_size = len(startState)
+    def __init__(self, permutation_size, gamma, temperature, movesLimit, memoryCapacity):
+        self.permutation_size = permutation_size
         input_size = self.permutation_size * 2
         hidden_size = 10
         output_size = 1
-        self.startState = startState
         self.gamma = gamma
+        self.startState = self.randomState()
         self.temperature = temperature
         self.memoryCapacity = memoryCapacity
         self.movesLimit = movesLimit
@@ -45,13 +45,27 @@ class Jogador(object):
         self.memoryCapacity = memoryCapacity
     
     def setMovesLimit(self, movesLimit) :
-        self.memoryCapacity = movesLimit
+        self.movesLimit = movesLimit
+    
+    def identity(self):
+        identity = []
+        for i in range(1, self.permutation_size + 1):
+            identity.append(i)
+        return identity
     
     def isIdentity(self, pi):
-        for i in range(0, len(pi)) :
-            if i+1 != pi[i] :
-                return False
-        return True
+        if pi == self.identity():
+            return True
+        return False
+    
+    def randomState(self):
+        permutation = self.identity()
+        state = []
+        while(len(permutation) > 0):
+            x = random.choice(permutation)
+            permutation.remove(x)
+            state.append(x)
+        return state
     
     def numberReversals(self, n):
         reversals = []
@@ -128,8 +142,8 @@ class Jogador(object):
     
     def runEpocas(self, length):
         for epoca in range(length):
-            print("Época:", epoca, "/", length)
-            pi = self.startState
+            print("Época:", epoca + 1, "/", length)
+            pi = self.randomState()
             tableScore = []
             moves = 0
             while (moves < self.movesLimit) and (self.isIdentity(pi) == False):
@@ -151,9 +165,6 @@ class Jogador(object):
                 if len(tableScore) > self.memoryCapacity:
                     del tableScore[0]
                 pi = nextState
-#            print("TableScore: ")
-#            for el in tableScore:
-#                print(el)
             if (self.isIdentity(pi) == True):
                 inputs = []
                 targets = []
@@ -166,104 +177,44 @@ class Jogador(object):
                         score = (float)(self.gamma * tableScore[i+1][2])
                     targets.append(torch.Tensor([score]).float().unsqueeze(0))
                 self.learn(inputs, targets)
-                print("Chegou na Identidade!")
+                print("Chegou na Identidade =)")
             else:
-                print("Falhou em chegar na Identidade!")
+                print("Falhou em chegar na Identidade =(")
     
-#    def easyTrain(self, distance, repetitions, epocas):
-#        for repetition in range(repetitions):
-#            start = []
-#            for i in range (1, self.permutation_size + 1):
-#                start.append(i)
-#            visited = [start]
-#            move = 0
-#            while (move < distance):
-#                move += 1
-#                nexts = []
-#                sigmas = self.getSigmas(start)
-#                for el in sigmas:
-#                    if el not in visited:
-#                        nexts.append(el)
-#                if nexts != []:
-#                    start = random.choice(nexts)
-#                for el in nexts:
-#                    visited.append(el)
-#            self.setStartState(start)
-#            self.runEpocas(epocas)
-                
-    def easyTrain(self, repetitions):
+    def easyTrain(self, distance, repetitions):
         for repetition in range(repetitions):
-            print("Repetição:", repetition, "/", repetitions)
-            identity = []
-            for i in range (1, self.permutation_size + 1):
-                identity.append(i)
-            nexts = []
-            sigmas = self.getSigmas(identity)
-            for sigma in sigmas:
-                nexts.append(sigma)
-            start = random.choice(nexts)
-            self.setStartState(start)
-#            print("Começei aki", start)
-            pi = self.startState
+            print("Repetição:", repetition + 1, "/", repetitions)
+            current = []
+            previous = []
             tableScore = []
-            state = self.join(start, identity)
-            state = torch.Tensor(state).unsqueeze(0)
-            valueExit = self.model(state).item()
-            tableScore.append((start, identity, valueExit))
-            moves = 0
-            while (moves < self.movesLimit) and (self.isIdentity(pi) == False):
-                moves += 1
-                results = []
-                choices = []
-                sigmas = self.getSigmas(pi)
-                for sigma in sigmas:
-                    state = self.join(pi, sigma)
-                    state = torch.Tensor(state).unsqueeze(0)
-                    valueExit = self.model(state).item()
-                    results.append(valueExit)
-                    choices.append(sigma)
-                
-                biggerScore = max(results)
-                intention = sigmas[results.index(biggerScore)]
-                nextState = self.markovDecision(choices, intention, self.temperature)
-#                    print("Estou indo para:", nextState)
-                
-                state = self.join(nextState, pi)
-#                    print("Como coloco:", state)
-                state = torch.Tensor(state).unsqueeze(0)
-                valueExit = self.model(state).item()
-#                    print("Meu valor de ida:", biggerScore)
-#                    print("Meu valor de volta:", valueExit)
-#                    print("\n")
-                tableScore.append((nextState, pi, valueExit))
-                if len(tableScore) > self.memoryCapacity:
-                    del tableScore[0]
-                pi = nextState
-#                print("TableScore: ")
-#                for el in tableScore:
-#                    print(el)
+            for i in range (1, self.permutation_size + 1):
+                current.append(i)
+            visited = [current]
+            score = 1
+            move = 0
+            while (move < distance):
+                if move > 0:
+                    score = score * self.gamma
+                move += 1
+                nexts = []
+                sigmas = self.getSigmas(current)
+                for el in sigmas:
+                    if el not in visited:
+                        nexts.append(el)
+                if nexts != []:
+                    previous = current
+                    current = random.choice(nexts)
+                    for el in nexts:
+                        visited.append(el)
+                    tableScore.append((current, previous, score))
             tableScore.reverse()
-#                print("TableScore (REVERSE): ")
-#                for el in tableScore:
-#                    print(el)
-            
-            if (self.isIdentity(pi) == False):
-                inputs = []
-                targets = []
-                for i in range(0, len(tableScore)):
-                    state = self.join(tableScore[i][0], tableScore[i][1])
-                    inputs.append(torch.Tensor(state).float().unsqueeze(0))
-                    if i == len(tableScore) - 1:
-                        score = 1
-                    else:
-                        score = (float)(self.gamma * tableScore[i+1][2])
-                    targets.append(torch.Tensor([score]).float().unsqueeze(0))
-#                print("Inputs:")
-#                for el in inputs:
-#                    print(el)
-#                print("Targets:")
-#                for el in targets:
-#                    print(el)
+            inputs = []
+            targets = []
+            for i in range(0, len(tableScore)):
+                state = self.join(tableScore[i][0], tableScore[i][1])
+                inputs.append(torch.Tensor(state).float().unsqueeze(0))
+                score = tableScore[i][2]
+                targets.append(torch.Tensor([score]).float().unsqueeze(0))
                 self.learn(inputs, targets)
         
     def goIdentity(self, start):
@@ -297,16 +248,41 @@ class Jogador(object):
    
 # ----------------------------------------------------------------
 
+
 # -- Jogador (Estado Inicial, Fator de desconto, Temperatura, Limite de Movimentos, Memoria para Backpropagation) --
-idiota = Jogador([5,3,1,7,6,2,4], 0.9, 50, 200, 100)
-idiota.easyTrain(100)
-idiota.runEpocas(100)
-#idiota.goIdentity([2,4,1,7,6,5,3])
+#idiota = Jogador(6, 0.9, 50, 100, 100)
+#idiota.runEpocas(2000)
+#
+#idiota.easyTrain(4,2000)
 
-#idiota.saveNetwork("idiotaNetwork")
+#idiota.goIdentity([2,4,1,3,6,5])
 
-#idiota.goIdentity([3,1,2])
 
-#idiota2 = Jogador([7,3,5,1,6,2,4], 0.9, 50, 1000, 100)
-#idiota2.loadNetwork("network7")
-#idiota2.goIdentity([3,1,5,2,4,7,6])
+#idiota2 = Jogador(7, 0.9, 50, 700, 200)
+#idiota2.loadNetwork("NetworkTest7")
+#idiota2.goIdentity([2,4,1,7,6,5,3])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
