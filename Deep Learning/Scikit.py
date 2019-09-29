@@ -1,21 +1,27 @@
 import numpy as np
 import random
+import os
 from sklearn.neural_network import MLPRegressor
+from joblib import dump, load
 
 class Jogador(object):
-    def __init__(self, startState, gamma, temperature, memoryCapacity):
-        hidden_size = 10
-        self.startState = startState
+    def __init__(self, permutation_size, hidden_size = 100, gamma = 0.9, temperature = 50, movesLimit = 30, memoryCapacity = 30):
+        self.permutation_size = permutation_size
+        self.startState = self.randomState()
         self.gamma = gamma
         self.temperature = temperature
         self.memoryCapacity = memoryCapacity
-        self.model = MLPRegressor(hidden_layer_sizes=(hidden_size,),
-                                  activation='tanh',
-                                  solver='adam',
-                                  learning_rate='constant',
-                                  max_iter=1000,
-                                  learning_rate_init=0.001)
-        self.model.fit([[0, 0, 0, 0, 0, 0]], [0])
+        self.movesLimit = movesLimit
+        self.model = MLPRegressor(hidden_layer_sizes = (hidden_size,),
+                                  activation ='relu',
+                                  solver ='adam',
+                                  warm_start = True,
+                                  learning_rate_init = 0.001)
+        self.initialFit()
+
+    def initialFit(self):
+        entry = list(range(0, self.permutation_size * 2))
+        self.model.fit([entry], [0])
         
     def setTemperature(self, temperature):
         self.temperature = temperature
@@ -23,12 +29,33 @@ class Jogador(object):
     def setStartState(self, startState):
         self.startState = startState
 
+    def setMemoryCapacity(self, memoryCapacity):
+        self.memoryCapacity = memoryCapacity
+    
+    def setMovesLimit(self, movesLimit) :
+        self.movesLimit = movesLimit
+
+    def identity(self):
+        identity = []
+        for i in range(1, self.permutation_size + 1):
+            identity.append(i)
+        return identity
+
     def isIdentity(self, pi):
         for i in range(0, len(pi)) :
             if i+1 != pi[i] :
                 return False
         return True
     
+    def randomState(self):
+        permutation = self.identity()
+        state = []
+        while(len(permutation) > 0):
+            x = random.choice(permutation)
+            permutation.remove(x)
+            state.append(x)
+        return state
+
     def numberReversals(self, n):
         reversals = []
         for i in range(0,n):
@@ -50,23 +77,19 @@ class Jogador(object):
             resultReversal[k] = strip[k-i]
         return resultReversal
 
-    def getSigmas(self, length, pi):
-        reversals = self.numberReversals(length)
+    def getSigmas(self, pi):
+        reversals = self.numberReversals(len(pi))
         sigmas = []
         for rev in reversals:
             sigmas.append(self.reversal(rev[0], rev[1], pi))
         return sigmas
 
     def join(self, pi, sigma):
-        state = []
-        for el in pi:
-            state.append(el)
-        for el in sigma:
-            state.append(el)
+        state = pi + sigma
         return state
     
-    def markovDecision(self, choices, intention, length, temperature):
-        lower = (100 / length)
+    def markovDecision(self, choices, intention, temperature):
+        lower = (100 / len(choices))
         if temperature < lower:
             temperature = lower
         elif temperature > 100:
@@ -80,50 +103,100 @@ class Jogador(object):
             return intention
         else:
             return escolha
-    
-    def learn(self, inputs, targets):
-        self.model.fit(inputs, targets)
         
-    def saveNetwork(self, name):
-        pass
+    def saveNetwork(self):
+        path = 'network.joblib'
+        dump(self.model, path) 
+        if os.path.isfile(path):
+            print("Rede salva com sucesso!")
+        else:
+            print("Erro ao salvar a rede!")
             
-    def loadNetwork(self, name):
-        pass
+    def loadNetwork(self, path):
+        if os.path.isfile(path):
+            self.model = load(path)
+            print("Rede carregada com sucesso!")
+        else:
+            print("Erro ao carregar a rede!")
     
     def runEpocas(self, length):
-        cont = 0
         for epoca in range(length):
-            cont += 1
-            print("Epoca:", cont, "/", length)
-            pi = self.startState
+            print("Epoca:", epoca + 1, "/", length)
+            pi = self.randomState()
             tableScore = []
-            while (self.isIdentity(pi) == False):
+            moves = 0
+            while (moves < self.movesLimit) and (self.isIdentity(pi) == False):
+                moves += 1
                 results = []
                 choices = []
-                sigmas = self.getSigmas(len(pi), pi)
+                sigmas = self.getSigmas(pi)
                 for sigma in sigmas:
                     state = self.join(pi, sigma)
                     valueExit = self.model.predict([state])
                     results.append(valueExit[0])
                     choices.append(sigma)
-                biggerScore = results[results.index(max(results))]
+                biggerScore = max(results)
                 intention = sigmas[results.index(max(results))]
-                nextState = self.markovDecision(choices, intention, len(choices), self.temperature)
+                nextState = self.markovDecision(choices, intention, self.temperature)
                 tableScore.append((pi, nextState, biggerScore))
                 if len(tableScore) > self.memoryCapacity:
                     del tableScore[0]
                 pi = nextState
+
+            if (self.isIdentity(pi) == True):
+                inputs = []
+                targets = []
+                for i in range(0, len(tableScore)):
+                    state = self.join(tableScore[i][0], tableScore[i][1])
+                    inputs.append(state)
+                    if i == len(tableScore) - 1:
+                        score = 1
+                    else:
+                        score = (float)(self.gamma * tableScore[i+1][2])
+                    targets.append(score)
+                try:
+                    self.model.fit(inputs, targets)
+                except:
+                    pass
+                print("Chegou na Identidade =)")
+            else:
+                print("Falhou em chegar na Identidade =(")
+                
+    def easyTrain(self, distance, repetitions):
+        for repetition in range(repetitions):
+            print("Repetição:", repetition + 1, "/", repetitions)
+            current = []
+            previous = []
+            tableScore = []
+            for i in range (1, self.permutation_size + 1):
+                current.append(i)
+            visited = [current]
+            score = 1
+            move = 0
+            while (move < distance):
+                if move > 0:
+                    score = score * self.gamma
+                move += 1
+                nexts = []
+                sigmas = self.getSigmas(current)
+                for el in sigmas:
+                    if el not in visited:
+                        nexts.append(el)
+                if nexts != []:
+                    previous = current
+                    current = random.choice(nexts)
+                    for el in nexts:
+                        visited.append(el)
+                    tableScore.append((current, previous, score))
+            tableScore.reverse()
             inputs = []
             targets = []
             for i in range(0, len(tableScore)):
                 state = self.join(tableScore[i][0], tableScore[i][1])
                 inputs.append(state)
-                if i == len(tableScore) - 1:
-                    score = 1
-                else:
-                    score = (float)(self.gamma * tableScore[i+1][2])
+                score = tableScore[i][2]
                 targets.append(score)
-            self.learn(inputs, targets)
+                self.model.fit(inputs, targets)
             
     def goIdentity(self, start):
         pi = start
@@ -132,13 +205,13 @@ class Jogador(object):
             print("Caminhando...")
             results = []
             choices = []
-            sigmas = self.getSigmas(len(pi), pi)
+            sigmas = self.getSigmas(pi)
             for sigma in sigmas:
                 state = self.join(pi, sigma)
                 valueExit = self.model.predict([state])
                 results.append(valueExit[0])
                 choices.append(sigma)
-            biggerScore = results[results.index(max(results))]
+            biggerScore = max(results)
             intention = sigmas[results.index(max(results))]
             nextState = intention
             tableScore.append((pi, nextState, biggerScore))
@@ -149,21 +222,10 @@ class Jogador(object):
             print("-->", el[1], "\tScore:", '{:.4f}'.format(el[2]))
 
 # ----------------------------------------------------------------
-        
-startState = [3,1,2]
 
-# -- Jogador (Estado Inicial, Fator de desconto, Temperatura, Memoria para Backpropagation) --
-idiota = Jogador(startState, 0.9, 50, 100)
-idiota.runEpocas(200)
-
-idiota.setStartState([2,3,1])
-idiota.runEpocas(200)
-
-idiota.setStartState([3,1,2])
-idiota.setTemperature(80)
-idiota.runEpocas(200)
-
-idiota.goIdentity([2,1,3])
+idiota2 = Jogador(3)
+idiota2.loadNetwork('network.joblib')
+idiota2.goIdentity([3,1,2])
 
 
 
