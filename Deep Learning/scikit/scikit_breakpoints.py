@@ -6,7 +6,7 @@ from joblib import dump, load
 import pdb
 
 class Jogador(object):
-    def __init__(self, permutation_size, hidden_size = 400, gamma = 0.9, temperature = 50, movesLimit = 70, memoryCapacity = 30):
+    def __init__(self, permutation_size, hidden_size = 400, gamma = 0.9, temperature = 50, movesLimit = 20, memoryCapacity = 30):
         self.permutation_size = permutation_size
         self.startState = self.randomState()
         self.gamma = gamma
@@ -262,14 +262,15 @@ class Jogador(object):
                     pass
                 
     def bkpTrain(self, repetitions):
+        inputs = []
+        targets = []
         for repetition in range(repetitions):
             print("Rodada:", repetition + 1, "/", repetitions)
             pi = self.randomState()
             bkpPi = self.getNumBkp(pi)
             sigmas = self.getSigmas(pi)
             score = None
-            inputs = []
-            targets = []
+            
             for sigma in sigmas:
                 bkpSigma = self.getNumBkp(sigma)
                 diference = bkpPi - bkpSigma
@@ -282,7 +283,8 @@ class Jogador(object):
                 entry = self.join(pi, sigma)
                 inputs.append(entry)
                 targets.append(score)
-            self.model.fit(inputs, targets)
+        print("Treinando...")
+        self.model.fit(inputs, targets)
             
     def easyTrain(self, distance, repetitions):
         for repetition in range(repetitions):
@@ -341,7 +343,7 @@ class Jogador(object):
             nextState = intention
             tableScore.append((pi, nextState, biggerScore))
             pi = nextState
-        if movimentos < 50:
+        if movimentos < 2*self.permutation_size:
             print("\nEstado inicial", start)
             print("Caminho Percorrido: ")
             for el in tableScore:
@@ -353,8 +355,7 @@ class Jogador(object):
 
 idiota = Jogador(20)
 idiota.setBkpReversals(True)
-idiota.runEpocas(2000)
-
-
+idiota.bkpTrain(100000)
+idiota.goIdentity(idiota.randomState())
 
 
